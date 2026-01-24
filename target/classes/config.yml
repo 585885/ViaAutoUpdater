@@ -1,0 +1,36 @@
+# ViaAutoUpdater 配置文件
+
+# 是否启用自动检查更新
+auto-check: true
+
+# 自动检查更新间隔（分钟）
+check-interval: 60
+
+# 要检查和更新的Via插件列表
+plugins:
+  - ViaVersion
+  - ViaBackwards
+  - ViaRewind
+  - ViaAprilFools
+
+# 是否在下载前备份当前插件
+backup: true
+
+# 备份文件夹路径（相对于插件目录）
+backup-folder: "ViaUpdateBackups"
+
+# 是否在更新完成后通知管理员
+notify-admins: true
+
+# 是否在更新完成后提醒重启服务器
+restart-reminder: true
+
+# 是否在服务器启动时检查更新
+check-on-startup: true
+
+# GitHub API配置
+github:
+  # API基础URL
+  api-url: "https://api.github.com"
+  # 请求超时时间（秒）
+  timeout: 30

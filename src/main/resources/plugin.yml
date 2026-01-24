@@ -1,0 +1,31 @@
+name: ViaAutoUpdater
+version: ${project.version}
+main: com.viaupdater.ViaUpdatePlugin
+api-version: "1.20"
+author: ViaAutoUpdater
+description: Via系列插件自动更新器 - 支持Paper和Folia
+folia-supported: true
+
+commands:
+  viaupdate:
+    description: Via插件更新命令
+    usage: /viaupdate <check|update|reload> [插件名]
+    permission: viaupdate.admin
+    aliases: [vu, viaupdater]
+
+permissions:
+  viaupdate.admin:
+    description: 管理员权限，允许使用所有ViaUpdate命令
+    default: op
+  viaupdate.notify:
+    description: 接收更新通知
+    default: op
+  viaupdate.check:
+    description: 检查更新
+    default: op
+  viaupdate.update:
+    description: 下载更新
+    default: op
+  viaupdate.reload:
+    description: 重载配置
+    default: op

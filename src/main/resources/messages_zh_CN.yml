@@ -1,0 +1,59 @@
+# ViaAutoUpdater 中文消息配置
+
+prefix: "&6[ViaAutoUpdater] &f"
+
+# 通用消息
+no-permission: "&c你没有权限执行此命令！"
+unknown-command: "&c未知的命令！使用 &e/viaupdate help &c查看帮助。"
+invalid-argument: "&c无效的参数！使用 &e/viaupdate help &c查看帮助。"
+only-player: "&c此命令只能由玩家执行！"
+plugin-reloaded: "&a配置已重载！"
+
+# 检查更新消息
+checking-updates: "&e正在检查更新..."
+no-updates-available: "&a所有插件已是最新版本！"
+update-available: "&e发现新版本更新！"
+update-available-detail: " &6插件: &f{plugin}\n &6当前版本: &f{current}\n &6最新版本: &f{latest}"
+check-error: "&c检查更新时出错: {error}"
+
+# 下载更新消息
+downloading-update: "&e正在下载 {plugin} v{version}..."
+download-success: "&a{plugin} v{version} 下载成功！已保存到 update 文件夹。"
+download-error: "&c下载 {plugin} 时出错: {error}"
+download-progress: "&e下载进度: {progress}%"
+
+# 备份消息
+backing-up: "&e正在备份 {plugin}..."
+backup-success: "&a{plugin} 备份成功！"
+backup-error: "&c备份 {plugin} 时出错: {error}"
+
+# 批量更新消息
+batch-update-start: "&e开始批量更新Via插件..."
+batch-update-complete: "&a批量更新完成！共更新 {count} 个插件。"
+batch-update-failed: "&c批量更新失败！成功: {success}, 失败: {failed}。"
+
+# 重启提醒
+restart-reminder: "&e================================================\n&eVia插件已更新到最新版本！\n&e请重启服务器以应用更新。\n&e================================================"
+
+# 自动检查消息
+auto-check-scheduled: "&a自动检查更新已启用，每 {interval} 分钟检查一次。"
+auto-check-disabled: "&c自动检查更新已禁用。"
+auto-check-triggered: "&e自动检查更新已触发..."
+
+# 插件状态消息
+plugin-not-found: "&c未找到插件: {plugin}"
+plugin-not-installed: "&c插件 {plugin} 未安装。"
+plugin-uptodate: "&a{plugin} 已是最新版本 v{version}。"
+
+# 帮助消息
+help-header: "&6========== ViaAutoUpdater 帮助 =========="
+help-command-check: "&e/viaupdate check [插件名] &7- 检查插件更新"
+help-command-update: "&e/viaupdate update [插件名] &7- 下载插件更新"
+help-command-reload: "&e/viaupdate reload &7- 重载配置文件"
+help-footer: "&6====================================="
+
+# 错误消息
+error-network: "&c网络错误: {error}"
+error-file: "&c文件操作错误: {error}"
+error-config: "&c配置文件错误: {error}"
+error-unknown: "&c未知错误: {error}"

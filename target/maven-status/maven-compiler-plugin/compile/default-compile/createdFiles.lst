@@ -1,0 +1,10 @@
+com\viaupdater\config\ConfigManager.class
+com\viaupdater\model\ViaPlugin.class
+com\viaupdater\manager\UpdateManager.class
+com\viaupdater\ViaUpdatePlugin.class
+com\viaupdater\commands\ViaUpdateCommand.class
+com\viaupdater\task\AutoCheckTask.class
+com\viaupdater\service\GitHubService$ReleaseInfo.class
+com\viaupdater\service\GitHubService.class
+com\viaupdater\manager\UpdateManager$PluginUpdateInfo.class
+com\viaupdater\config\Messages.class
