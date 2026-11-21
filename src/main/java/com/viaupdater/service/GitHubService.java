@@ -21,9 +21,23 @@ public class GitHubService {
     private final String apiUrl;
     private final int timeout;
 
+    /**
+     * 执行阻塞式 HTTP 调用的线程池。
+     *
+     * <p>原始实现用 {@code CompletableFuture.supplyAsync} 单参版本，跑在
+     * {@code ForkJoinPool.commonPool()} 上；服务端其它异步任务共用该池，
+     * 下载大 jar 会把它占满。这里允许注入专用池，默认仍回退到 commonPool 以保持兼容。
+     */
+    private final java.util.concurrent.Executor executor;
+
     public GitHubService(ViaUpdatePlugin plugin) {
+        this(plugin, java.util.concurrent.ForkJoinPool.commonPool());
+    }
+
+    public GitHubService(ViaUpdatePlugin plugin, java.util.concurrent.Executor executor) {
         this.plugin = plugin;
         this.gson = new Gson();
+        this.executor = executor;
         this.apiUrl = plugin.getConfig().getString("github.api-url", "https://api.github.com");
         this.timeout = plugin.getConfig().getInt("github.timeout", 30) * 1000;
     }
@@ -72,7 +86,7 @@ public class GitHubService {
                 plugin.getLogger().severe("获取GitHub发布信息失败: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-        });
+        }, executor);
     }
 
     public CompletableFuture<Path> downloadFile(String downloadUrl, Path targetPath) {
@@ -97,7 +111,7 @@ public class GitHubService {
                 plugin.getLogger().severe("下载文件失败: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-        });
+        }, executor);
     }
 
     public record ReleaseInfo(String version, String htmlUrl, String downloadUrl, String fileName) {}
