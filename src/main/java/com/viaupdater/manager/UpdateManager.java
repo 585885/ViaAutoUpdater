@@ -16,8 +16,12 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class UpdateManager {
@@ -26,9 +30,26 @@ public class UpdateManager {
     private final GitHubService gitHubService;
     private final Messages messages;
 
+    /**
+     * 专用 IO 线程池。
+     *
+     * <p>原始实现用 {@code CompletableFuture.supplyAsync} 单参版本，跑在
+     * {@code ForkJoinPool.commonPool()} 上；服务端其它异步任务共用该池，
+     * 下载大 jar 会把它占满、拖慢别处。改用独立池，{@link #shutdown()} 回收。
+     */
+    private final ExecutorService ioExecutor;
+
     public UpdateManager(ViaUpdatePlugin plugin) {
         this.plugin = plugin;
-        this.gitHubService = new GitHubService(plugin);
+        this.ioExecutor = Executors.newFixedThreadPool(
+                Math.max(2, Runtime.getRuntime().availableProcessors() / 2),
+                runnable -> {
+                    Thread thread = new Thread(runnable, "ViaAutoUpdater-IO");
+                    thread.setDaemon(true);
+                    return thread;
+                }
+        );
+        this.gitHubService = new GitHubService(plugin, ioExecutor);
         this.messages = plugin.getMessages();
     }
 
@@ -38,7 +59,9 @@ public class UpdateManager {
 
     public void checkAllUpdates(CommandSender sender) {
         List<String> enabledPlugins = plugin.getConfig().getStringList("plugins");
-        List<PluginUpdateInfo> updates = new ArrayList<>();
+        // ⚠️ 必须是线程安全的：下面 each checkUpdate 的回调在各自线程里并发 add，
+        // 用普通 ArrayList 会丢元素，运气差还会抛 ConcurrentModificationException。
+        List<PluginUpdateInfo> updates = Collections.synchronizedList(new ArrayList<>());
 
         CompletableFuture.allOf(enabledPlugins.stream()
                 .map(pluginName -> checkUpdate(pluginName)
@@ -98,7 +121,7 @@ public class UpdateManager {
                 plugin.getLogger().severe("检查 " + pluginName + " 更新时出错: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-        });
+        }, ioExecutor);
     }
 
     public void updateAllPlugins(CommandSender sender) {
@@ -191,7 +214,7 @@ public class UpdateManager {
                 plugin.getLogger().severe("下载更新时出错: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-        });
+        }, ioExecutor);
     }
 
     private void backupPlugin(String pluginName) {
@@ -215,8 +238,9 @@ public class UpdateManager {
 
     private File findPluginFile(String pluginName) {
         Path pluginsDir = plugin.getDataFolder().getParentFile().toPath();
-        try {
-            return Files.list(pluginsDir)
+        // try-with-resources：Files.list 返回的 Stream 持有目录句柄，不关会一直泄漏。
+        try (var stream = Files.list(pluginsDir)) {
+            return stream
                     .filter(path -> path.toString().toLowerCase().endsWith(".jar"))
                     .filter(path -> path.getFileName().toString().toLowerCase().contains(pluginName.toLowerCase()))
                     .map(Path::toFile)
@@ -241,6 +265,19 @@ public class UpdateManager {
                 });
     }
 
+    /** 插件卸载时调用，回收 IO 线程池。 */
+    public void shutdown() {
+        ioExecutor.shutdown();
+        try {
+            if (!ioExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                ioExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            ioExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public record PluginUpdateInfo(
             String pluginName,
             String currentVersion,
@@ -249,7 +286,45 @@ public class UpdateManager {
             String fileName
     ) {
         public boolean hasUpdate() {
-            return !currentVersion.equals(latestVersion);
+            // ⚠️ 不能直接字符串比较：'v1.0.0' 与 '1.0.0'、'1.0' 与 '1.0.0' 都会被误判成有更新。
+            return compareVersions(currentVersion, latestVersion) > 0;
+        }
+
+        /**
+         * 按版本号逐段数值比较，返回 &gt;0 表示 latest 更新。
+         *
+         * <p>规则：忽略前导 'v'/'V'；按 '.' 切分；非数字段按 0 处理；
+         * 段数不足的一侧补 0（所以 1.0 == 1.0.0）。
+         */
+        private static int compareVersions(String current, String latest) {
+            String a = stripPrefix(current);
+            String b = stripPrefix(latest);
+            String[] pa = a.split("\\.");
+            String[] pb = b.split("\\.");
+            int len = Math.max(pa.length, pb.length);
+            for (int i = 0; i < len; i++) {
+                int x = i < pa.length ? parseIntSafe(pa[i]) : 0;
+                int y = i < pb.length ? parseIntSafe(pb[i]) : 0;
+                if (x != y) return Integer.compare(y, x);
+            }
+            return 0;
+        }
+
+        private static String stripPrefix(String v) {
+            if (v == null) return "0";
+            String s = v.trim();
+            if (!s.isEmpty() && (s.charAt(0) == 'v' || s.charAt(0) == 'V')) s = s.substring(1);
+            return s.isEmpty() ? "0" : s;
+        }
+
+        private static int parseIntSafe(String segment) {
+            try {
+                int dash = segment.indexOf('-');
+                String num = dash >= 0 ? segment.substring(0, dash) : segment;
+                return num.isEmpty() ? 0 : Integer.parseInt(num);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
         }
     }
 }
